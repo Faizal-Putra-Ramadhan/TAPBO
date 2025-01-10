@@ -19,29 +19,37 @@ public class LibraryManagment extends User{
     public void tambahBuku() {
         System.out.print("Masukkan Nama Buku: ");
         String namaBuku = sc.nextLine();
+
         System.out.print("Masukkan Penulis Buku: ");
         String penulis = sc.nextLine();
+
         System.out.print("Masukkan Tahun Terbit Buku: ");
         String tahunTerbit = sc.nextLine();
-        System.out.print("Masukkan Harga Buku: ");
-        long harga = sc.nextLong();
-        sc.nextLine(); // Konsum newline
 
+        System.out.print("Masukkan Harga Buku: ");
+        long harga = 0;
         try {
-            FileWriter fw = new FileWriter(getNama() + "_Barang.txt", true);
+            harga = Long.parseLong(sc.nextLine());
+        } catch (NumberFormatException e) {
+            System.out.println("Harga harus berupa angka. Coba lagi.");
+            return;
+        }
+
+        // Menulis data ke file
+        try (FileWriter fw = new FileWriter("dataBuku.txt", true)) {
             fw.write(namaBuku + "," + penulis + "," + tahunTerbit + "," + harga + "\n");
-            fw.close();
             System.out.println("Buku berhasil ditambahkan!");
         } catch (IOException e) {
-            System.out.println("Terjadi kesalahan saat menambahkan buku.");
+            System.out.println("Terjadi kesalahan saat menambahkan buku: " + e.getMessage());
         }
     }
+
 
 
     // Metode untuk menghapus buku
     public void hapusBuku() {
         try {
-            File file = new File(getNama() + "_Barang.txt");
+            File file = new File("dataBuku.txt");
             Scanner fileReader = new Scanner(file);
             List<String> buku = new ArrayList<>();
             while (fileReader.hasNextLine()) {
@@ -154,6 +162,71 @@ public class LibraryManagment extends User{
         }
     }
 
+    public static void lihatInformasiUser() {
+        ArrayList<String> akun = new ArrayList<>();
+        try {
+            File file = new File("akun.txt");
+            Scanner fileReader = new Scanner(file);
+
+            // Read the akun.txt file
+            while (fileReader.hasNextLine()) {
+                akun.add(fileReader.nextLine());
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("Pengguna tidak ditemukan.");
+            return;  // Exit the method if the file is not found
+        }
+
+        // Print out the user information
+        System.out.println("Informasi User:");
+        for (int j = 0; j < akun.size(); j++) {
+            try {
+                File userFile = new File(akun.get(j) + ".txt");
+                Scanner userReader = new Scanner(userFile);
+
+                // Read user information from the file
+                if (userReader.hasNextLine()) {
+                    String namaTersimpan = userReader.nextLine();
+                    String passwordTersimpan = userReader.nextLine();
+                    long saldo = Long.parseLong(userReader.nextLine());
+
+                    System.out.println((j + 1) + ". Nama: " + namaTersimpan + ", Pass: " + passwordTersimpan );
+                }
+            } catch (FileNotFoundException e) {
+                System.out.println("Pengguna tidak ditemukan untuk akun: " + akun.get(j));
+            } catch (Exception e) {
+                System.out.println("Terjadi kesalahan saat membaca informasi pengguna: " + akun.get(j));
+            }
+        }
+    }
+
+    public void menuAdmin(){
+        boolean ulang = true;
+        while(ulang){
+            int pilihan;
+            System.out.println("Menu Admin");
+            System.out.println("1. Tambah Buku");
+            System.out.println("2. Hapus Buku");
+            System.out.println("3. Lihat Informasi User");
+            System.out.println("4. Logout");
+            System.out.print("Masukan pilihan anda : ");
+            pilihan = sc.nextInt();
+            sc.nextLine();
+
+            if(pilihan == 1){
+                tambahBuku();
+            }else if(pilihan == 2){
+                hapusBuku();
+            }else if(pilihan == 3){
+                lihatInformasiUser();
+            }else if(pilihan == 4){
+                ulang = false;
+            }else{
+                System.out.println("Pilihan anda tidak valid!!");
+            }
+        }
+    }
+
     public void daftarPengguna() {
 
         System.out.print("Masukkan Nama: ");
@@ -201,6 +274,11 @@ public class LibraryManagment extends User{
         System.out.print("Masukkan Password: ");
         String password = sc.nextLine();
 
+        if(username.equals("admin") && password.equals("admin")){
+            menuAdmin();
+            return;
+        }
+
         try {
             File file = new File(username + ".txt");
             Scanner fileReader = new Scanner(file);
@@ -211,7 +289,7 @@ public class LibraryManagment extends User{
 
             fileReader.close();
 
-            if (namaTersimpan.equals(username) && passwordTersimpan.equals(password)) {
+             if (namaTersimpan.equals(username) && passwordTersimpan.equals(password)) {
                 setNama(username);
                 setPassword(password);
                 setSaldo(saldo);
@@ -225,14 +303,102 @@ public class LibraryManagment extends User{
         }
     }
 
+    public void tambahPembelian() {
+        try {
+            File file = new File("dataBuku.txt");
+            Scanner fileReader = new Scanner(file);
+            List<String> buku = new ArrayList<>();
+            while (fileReader.hasNextLine()) {
+                buku.add(fileReader.nextLine());
+            }
+            fileReader.close();
+
+            if (buku.size() == 0) {
+                System.out.println("Tidak ada buku yang tersedia.");
+                return;
+            }
+
+            System.out.println("Daftar Buku Tersedia:");
+            for (int i = 0; i < buku.size(); i++) {
+                String[] data = buku.get(i).split(",");
+                System.out.println((i + 1) + ". " + data[0] + ", " + data[1] + ", " + data[2] + ", Harga: " + data[3]);
+            }
+
+            System.out.print("Pilih nomor buku yang ingin ditambahkan ke keranjang: ");
+            int pilihan = sc.nextInt();
+            sc.nextLine(); // Konsum newline
+
+            if (pilihan > 0 && pilihan <= buku.size()) {
+                String selectedBook = buku.get(pilihan - 1);
+
+                // Menambahkan buku yang dipilih ke dalam file pembelian pengguna
+                File userCartFile = new File(getNama() + "_Barang.txt");
+                FileWriter fw = new FileWriter(userCartFile, true);
+                fw.write(selectedBook + "\n");
+                fw.close();
+
+                System.out.println("Buku berhasil ditambahkan ke keranjang.");
+            } else {
+                System.out.println("Pilihan tidak valid.");
+            }
+        } catch (IOException e) {
+            System.out.println("Terjadi kesalahan saat menambah buku ke keranjang.");
+        }
+    }
+
+    public void hapusPembelian() {
+        try {
+            File userCartFile = new File(getNama() + "_Barang.txt");
+            Scanner fileReader = new Scanner(userCartFile);
+            List<String> pembelian = new ArrayList<>();
+            while (fileReader.hasNextLine()) {
+                pembelian.add(fileReader.nextLine());
+            }
+            fileReader.close();
+
+            if (pembelian.size() == 0) {
+                System.out.println("Keranjang Anda kosong.");
+                return;
+            }
+
+            System.out.println("Daftar Buku di Keranjang:");
+            for (int i = 0; i < pembelian.size(); i++) {
+                String[] data = pembelian.get(i).split(",");
+                System.out.println((i + 1) + ". " + data[0] + ", " + data[1] + ", " + data[2] + ", Harga: " + data[3]);
+            }
+
+            System.out.print("Pilih nomor buku yang ingin dihapus dari keranjang: ");
+            int pilihan = sc.nextInt();
+            sc.nextLine(); // Konsum newline
+
+            if (pilihan > 0 && pilihan <= pembelian.size()) {
+                // Menghapus buku berdasarkan pilihan pengguna
+                pembelian.remove(pilihan - 1);
+
+                // Menulis ulang daftar pembelian ke file
+                FileWriter fw = new FileWriter(userCartFile);
+                for (int i = 0; i < pembelian.size(); i++) {
+                    fw.write(pembelian.get(i) + "\n");
+                }
+                fw.close();
+
+                System.out.println("Buku berhasil dihapus dari keranjang.");
+            } else {
+                System.out.println("Pilihan tidak valid.");
+            }
+        } catch (IOException e) {
+            System.out.println("Terjadi kesalahan saat menghapus buku dari keranjang.");
+        }
+    }
+
     private void tampilkanMenu() {
         boolean jalan = true;
 
         while (jalan) {
             System.out.println("\nSelamat datang, " + getNama());
             System.out.println("Saldo: " + getSaldo());
-            System.out.println("1. Tambah Buku");
-            System.out.println("2. Hapus Buku");
+            System.out.println("1. Tambah Pembelian");
+            System.out.println("2. Hapus Pembelian");
             System.out.println("3. Checkout");
             System.out.println("4. Top Up");
             System.out.println("5. Tampilkan Info");
@@ -244,10 +410,10 @@ public class LibraryManagment extends User{
 
             switch (pilihan) {
                 case 1 :
-                    tambahBuku();
+                    tambahPembelian();
                     break;
                 case 2 :
-                    hapusBuku();
+                    hapusPembelian();
                     break;
                 case 3 :
                     checkout();
